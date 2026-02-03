@@ -22,12 +22,17 @@ func callEcho(w http.ResponseWriter, r *http.Request) {
 	resp, err := client.Get(url)
 	if err != nil {
 		log.Printf("service=B endpoint=/call-echo status=error error=%q latency_ms=%d", err.Error(), time.Since(start).Milliseconds())
-		w.WriteHeader(http.StatusServiceUnavailable)
-		_ = json.NewEncoder(w).Encode(map[string]any{
+		respBody := map[string]any{
 			"service_b": "ok",
 			"service_a": "unavailable",
 			"error":     err.Error(),
-		})
+			"message":   "failed to reach service A",
+			"status":    http.StatusServiceUnavailable,
+		}
+		b, _ := json.MarshalIndent(respBody, "", "  ")
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusServiceUnavailable)
+		_, _ = w.Write(b)
 		return
 	}
 	defer resp.Body.Close()
@@ -36,10 +41,13 @@ func callEcho(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewDecoder(resp.Body).Decode(&data)
 
 	log.Printf("service=B endpoint=/call-echo status=ok latency_ms=%d", time.Since(start).Milliseconds())
-	_ = json.NewEncoder(w).Encode(map[string]any{
+	respBody := map[string]any{
 		"service_b": "ok",
 		"service_a": data,
-	})
+	}
+	b, _ := json.MarshalIndent(respBody, "", "  ")
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = w.Write(b)
 }
 
 func main() {
